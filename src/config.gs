@@ -5,7 +5,6 @@
  * このファイルには以下が含まれます：
  * - API認証情報の取得
  * - アラート設定
- * - メッセージテンプレート
  * - その他定数
  */
 
@@ -23,9 +22,6 @@ function getConfig() {
 
     // アラート設定
     alerts: getAlertSettings(),
-
-    // メッセージテンプレート
-    messages: getMessageTemplates(),
 
     // その他定数
     constants: getConstants()
@@ -63,7 +59,7 @@ function getEndpoints() {
  */
 function getAlertSettings() {
   return {
-    // 恐怖ゾーンの閾値
+    // 恐怖ゾーンの閾値（この値を変更するとアラート条件が変わります）
     extremeFearThreshold: 20,
 
     // 将来の拡張用（コメントアウト）
@@ -78,52 +74,6 @@ function getAlertSettings() {
       // 将来の拡張用
       // ESCAPE_EXTREME_FEAR: 'escape_extreme_fear',
       // ENTER_GREED: 'enter_greed',
-    }
-  };
-}
-
-/**
- * メッセージテンプレートを取得
- * @return {Object} メッセージテンプレート
- */
-function getMessageTemplates() {
-  return {
-    // 分類の日本語マッピング
-    classifications: {
-      'extreme fear': '極度の恐怖 😱',
-      'fear': '恐怖 😰',
-      'neutral': '中立 😐',
-      'greed': '欲望 😊',
-      'extreme greed': '極度の欲望 🤑'
-    },
-
-    // アラートメッセージのテンプレート
-    alerts: {
-      escape_fear: {
-        title: '🚨 恐怖ゾーン脱出アラート！',
-        description: 'CNN Fear & Greed Index が 20 を超えました 📈',
-        footer: '株式市場の心理が改善傾向にあります',
-        hashtags: '#FearAndGreedIndex #StockMarket #SP500 #恐怖ゾーン脱出'
-      },
-      enter_fear: {
-        title: '🚨 恐怖ゾーン突入アラート！',
-        description: 'CNN Fear & Greed Index が 20 以下になりました 📉',
-        footer: '株式市場の心理が悪化しています。注意が必要です',
-        hashtags: '#FearAndGreedIndex #StockMarket #SP500 #極度の恐怖'
-      }
-    },
-
-    // 定期レポートのテンプレート
-    report: {
-      title: '🔔 CNN Fear & Greed Index（米国株式市場）',
-      hashtags: '#StockMarket #SP500 #FearAndGreedIndex'
-    },
-
-    // ゲージ設定
-    gauge: {
-      filledSymbol: '🟩',
-      emptySymbol: '⬜',
-      maxBars: 10
     }
   };
 }
