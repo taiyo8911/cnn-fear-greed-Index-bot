@@ -1,0 +1,184 @@
+/**
+ * main.gs
+ * Fear & Greed Index Bot - メイン実行ファイル
+ *
+ * このファイルには以下が含まれます：
+ * - トリガーから呼び出される関数（checkAlert, dailyReport）
+ * - Bot実行のメインロジック
+ * - テスト用関数
+ */
+
+/**
+ * アラート監視（1時間ごとに実行）
+ * トリガーから自動実行される
+ */
+function checkAlert() {
+  Logger.log('🔍 アラート監視: ' + new Date());
+  runBot(false);
+}
+
+/**
+ * 定期レポート（毎日朝9時に実行）
+ * トリガーから自動実行される
+ */
+function dailyReport() {
+  Logger.log('📊 定期レポート: ' + new Date());
+  runBot(true);
+}
+
+/**
+ * Bot実行のメインロジック
+ * @param {boolean} isScheduledReport - 定期レポートならtrue、アラート監視ならfalse
+ */
+function runBot(isScheduledReport) {
+  // 1. 指数を取得
+  const indexData = fetchFearGreedIndex();
+  if (!indexData) {
+    Logger.log('❌ 指数の取得に失敗');
+    return;
+  }
+
+  Logger.log(`現在: ${indexData.value} (${indexData.classification})`);
+
+  // 2. 前回のデータを取得
+  const previousData = loadPreviousData();
+  const previousValue = previousData ? previousData.value : null;
+
+  if (previousValue !== null) {
+    Logger.log(`前回: ${previousValue}`);
+  }
+
+  // 3. アラートチェック
+  const alertType = checkAlerts(previousValue, indexData.value);
+
+  // 4. 投稿判定
+  let shouldPost = false;
+  let message = null;
+
+  if (alertType) {
+    // アラート発生
+    Logger.log(`⚠️ アラート: ${alertType}`);
+    message = createMessage(indexData, alertType);
+    shouldPost = true;
+  } else if (isScheduledReport) {
+    // 定期レポート
+    Logger.log('📊 定期レポート投稿');
+    message = createMessage(indexData, null);
+    shouldPost = true;
+  } else {
+    // 変化なし
+    Logger.log('✓ 変化なし');
+  }
+
+  // 5. 投稿処理
+  if (shouldPost && message) {
+    Logger.log('\n--- メッセージ ---');
+    Logger.log(message);
+    Logger.log('------------------\n');
+
+    if (postToTwitter(message)) {
+      saveData(indexData);
+    } else {
+      Logger.log('⚠️ 投稿失敗のためデータ未保存');
+    }
+  } else {
+    // 投稿しない場合でもデータは保存
+    saveData(indexData);
+  }
+}
+
+/**
+ * テスト実行（投稿なし）
+ * 手動実行用：指数取得とアラート判定のみ
+ */
+function testBot() {
+  Logger.log('=== テスト実行（投稿なし） ===');
+
+  // 指数を取得
+  const indexData = fetchFearGreedIndex();
+  if (!indexData) {
+    Logger.log('❌ 指数の取得に失敗');
+    return;
+  }
+
+  Logger.log(`✅ Index: ${indexData.value} (${indexData.classification})`);
+
+  // 前回のデータを取得
+  const previousData = loadPreviousData();
+  const previousValue = previousData ? previousData.value : null;
+
+  if (previousValue !== null) {
+    Logger.log(`前回: ${previousValue}`);
+  } else {
+    Logger.log('前回: データなし（初回実行）');
+  }
+
+  // アラートチェック
+  const alertType = checkAlerts(previousValue, indexData.value);
+
+  if (alertType) {
+    Logger.log(`⚠️ アラート検出: ${alertType}`);
+    const message = createMessage(indexData, alertType);
+    Logger.log('\n--- メッセージプレビュー ---');
+    Logger.log(message);
+    Logger.log('---------------------------\n');
+  } else {
+    Logger.log('✓ アラートなし');
+    const message = createMessage(indexData, null);
+    Logger.log('\n--- 定期レポートプレビュー ---');
+    Logger.log(message);
+    Logger.log('-----------------------------\n');
+  }
+
+  Logger.log('※ このテストでは投稿は行われません');
+}
+
+/**
+ * 実投稿テスト
+ * 手動実行用：実際にXに投稿します（1回のみ実行推奨）
+ */
+function testRealPost() {
+  Logger.log('=== 実投稿テスト ===');
+
+  const indexData = fetchFearGreedIndex();
+  if (!indexData) {
+    Logger.log('❌ 指数の取得に失敗');
+    return;
+  }
+
+  Logger.log(`✅ Index: ${indexData.value} (${indexData.classification})`);
+
+  const message = createMessage(indexData, null);
+
+  Logger.log('\n--- 投稿内容 ---');
+  Logger.log(message);
+  Logger.log('----------------\n');
+
+  if (postToTwitter(message)) {
+    Logger.log('✅ 投稿成功! Xを確認してください');
+    saveData(indexData);
+  } else {
+    Logger.log('❌ 投稿失敗');
+  }
+}
+
+/**
+ * キャッシュクリアテスト
+ * 手動実行用：保存されたデータをクリアします
+ */
+function testClearCache() {
+  Logger.log('=== キャッシュクリアテスト ===');
+
+  // クリア前のデータを表示
+  Logger.log('クリア前:');
+  debugShowCache();
+
+  // クリア実行
+  if (clearCache()) {
+    Logger.log('\n✅ キャッシュをクリアしました\n');
+
+    // クリア後のデータを表示
+    Logger.log('クリア後:');
+    debugShowCache();
+  }
+}
