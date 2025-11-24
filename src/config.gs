@@ -23,6 +23,9 @@ function getConfig() {
     // アラート設定
     alerts: getAlertSettings(),
 
+    // メッセージテンプレート
+    messages: getMessageTemplates(),  // ← この行を追加
+
     // その他定数
     constants: getConstants()
   };
@@ -117,4 +120,50 @@ function setApiCredentials() {
     'X_ACCESS_TOKEN_SECRET': ''
   });
   Logger.log('✅ API認証情報を設定しました');
+}
+
+/**
+ * メッセージテンプレートを取得
+ * @return {Object} メッセージテンプレート
+ */
+function getMessageTemplates() {
+  return {
+    // 分類の日本語マッピング
+    classifications: {
+      'extreme fear': '極度の恐怖 😱',
+      'fear': '恐怖 😰',
+      'neutral': '中立 😐',
+      'greed': '欲望 😊',
+      'extreme greed': '極度の欲望 🤑'
+    },
+
+    // アラートメッセージのテンプレート
+    alerts: {
+      escape_fear: {
+        title: '🚨 恐怖ゾーン脱出アラート！',
+        description: 'CNN Fear & Greed Index が 20 を超えました 📈',
+        footer: '株式市場の心理が改善傾向にあります',
+        hashtags: '#米国株 #買い時'
+      },
+      enter_fear: {
+        title: '🚨 恐怖ゾーン突入アラート！',
+        description: 'CNN Fear & Greed Index が 20 以下になりました 📉',
+        footer: '株式市場の心理が悪化しています。注意が必要です',
+        hashtags: '米国株 #暴落'
+      }
+    },
+
+    // 定期レポートのテンプレート
+    report: {
+      title: '🔔 CNN Fear & Greed Index（米国株式市場）',
+      hashtags: '#米国株 #SP500'
+    },
+
+    // ゲージ設定
+    gauge: {
+      filledSymbol: '🟩',
+      emptySymbol: '⬜',
+      maxBars: 10
+    }
+  };
 }

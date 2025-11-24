@@ -1,122 +1,139 @@
 /**
- * message.gs
- * Fear & Greed Index Bot - メッセージ生成（シンプル版）
+ * messages.gs
+ * Fear & Greed Index Bot - メッセージ生成
  *
- * 投稿文を編集したい場合は、このファイルの各関数を直接編集してください
+ * このファイルには以下が含まれます：
+ * - ツイート文の作成
+ * - ゲージの生成
+ * - 分類の日本語変換
+ * - 日時フォーマット
  */
 
 /**
  * メッセージ生成（メイン関数）
  * @param {Object} indexData - 指数データ {value, classification, timestamp}
- * @param {string|null} alertType - アラートタイプ（'escape_fear', 'enter_fear', null）
- * @return {string} 投稿するメッセージ文
+ * @param {string|null} alertType - アラートタイプまたはnull
+ * @return {string} メッセージ文
  */
 function createMessage(indexData, alertType) {
-  const value = indexData.value;
-  const classification = indexData.classification;
+  if (alertType) {
+    return buildAlertMessage(indexData, alertType);
+  } else {
+    return buildReportMessage(indexData);
+  }
+}
 
-  // ゲージ作成
+/**
+ * アラートメッセージを構築
+ * @param {Object} indexData - 指数データ
+ * @param {string} alertType - アラートタイプ
+ * @return {string} アラートメッセージ
+ */
+function buildAlertMessage(indexData, alertType) {
+  const config = getConfig();
+  const template = config.messages.alerts[alertType];
+
+  if (!template) {
+    Logger.log('⚠️ 未定義のアラートタイプ: ' + alertType);
+    return buildReportMessage(indexData);
+  }
+
+  const dateTime = formatDateTime();
+  const value = indexData.value;
+  const classificationJp = translateClassification(indexData.classification);
   const gauge = createGauge(value);
 
-  // 日本語の状態
-  const statusJp = getStatusJapanese(classification);
+  return `${dateTime}
+${template.title}
 
-  // アラート種類に応じてメッセージを返す
-  if (alertType === 'escape_fear') {
-    return createEscapeFearMessage(value, statusJp, gauge);
-  }
-
-  if (alertType === 'enter_fear') {
-    return createEnterFearMessage(value, statusJp, gauge);
-  }
-
-  // 通常の定期レポート
-  return createDailyReport(value, statusJp, gauge, classification);
-}
-
-
-// ========================================
-// 投稿文のテンプレート（ここを編集する）
-// ========================================
-
-/**
- * 恐怖ゾーン脱出アラートの投稿文
- * 指数が 20以下 → 21以上 になった時に投稿
- */
-function createEscapeFearMessage(value, statusJp, gauge) {
-  return `🚨 恐怖ゾーン脱出アラート！
-
-CNN Fear & Greed Index が 20 を超えました 📈
+${template.description}
 
 📊 現在の指数: ${value}/100
-😊 状態: ${statusJp}
+😊 状態: ${classificationJp}
 
 ${gauge}
 
-株式市場の心理が改善傾向にあります
+${template.footer}
 
-#FearAndGreedIndex #StockMarket #SP500 #恐怖ゾーン脱出`;
+${template.hashtags}`;
 }
 
 /**
- * 恐怖ゾーン突入アラートの投稿文
- * 指数が 21以上 → 20以下 になった時に投稿
+ * 定期レポートメッセージを構築
+ * @param {Object} indexData - 指数データ
+ * @return {string} レポートメッセージ
  */
-function createEnterFearMessage(value, statusJp, gauge) {
-  return `🚨 恐怖ゾーン突入アラート！
+function buildReportMessage(indexData) {
+  const config = getConfig();
+  const template = config.messages.report;
 
-CNN Fear & Greed Index が 20 以下になりました 📉
+  const dateTime = formatDateTime();
+  const value = indexData.value;
+  const classificationJp = translateClassification(indexData.classification);
+  const gauge = createGauge(value);
 
-📊 現在の指数: ${value}/100
-😊 状態: ${statusJp}
-
-${gauge}
-
-株式市場の心理が悪化しています。注意が必要です
-
-#FearAndGreedIndex #StockMarket #SP500 #極度の恐怖`;
-}
-
-/**
- * 定期レポートの投稿文
- * 毎日朝9時に投稿（アラートがない時）
- */
-function createDailyReport(value, statusJp, gauge, classification) {
-  return `🔔 CNN Fear & Greed Index（米国株式市場）
+  return `${dateTime}
+${template.title}
 
 📊 指数: ${value}/100
-😊 状態: ${statusJp}
+😊 状態: ${classificationJp}
 
 ${gauge}
 
-#${classification.replace(/\s+/g, '')} #StockMarket #SP500 #FearAndGreedIndex`;
+${template.hashtags}`;
 }
 
+/**
+ * 日時を日本語形式でフォーマット
+ * @return {string} フォーマット済み日時文字列（例: "11月22日(日) 8:48 現在"）
+ */
+function formatDateTime() {
+  const now = new Date();
 
-// ========================================
-// サポート関数（通常は編集不要）
-// ========================================
+  // 日本時間に変換
+  const jstOffset = 9 * 60; // JSTはUTC+9
+  const jstTime = new Date(now.getTime() + (jstOffset + now.getTimezoneOffset()) * 60000);
+
+  const month = jstTime.getMonth() + 1;
+  const date = jstTime.getDate();
+  const hours = jstTime.getHours();
+  const minutes = jstTime.getMinutes();
+
+  // 曜日を取得
+  const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][jstTime.getDay()];
+
+  // 分を2桁にフォーマット
+  const minutesFormatted = minutes < 10 ? '0' + minutes : minutes;
+
+  return `${month}月${date}日(${dayOfWeek}) ${hours}:${minutesFormatted} 現在`;
+}
 
 /**
  * ゲージを作成（視覚的な指数表示）
- * 例: 🟩🟩🟩🟩🟩⬜⬜⬜⬜⬜ 50%
+ * @param {number} value - 指数値 (0-100)
+ * @return {string} ゲージ文字列
  */
 function createGauge(value) {
+  const config = getConfig();
+  const gaugeConfig = config.messages.gauge;
+
   const filled = Math.floor(value / 10);
-  const empty = 10 - filled;
-  return '🟩'.repeat(filled) + '⬜'.repeat(empty) + ` ${value}%`;
+  const empty = gaugeConfig.maxBars - filled;
+
+  return gaugeConfig.filledSymbol.repeat(filled) +
+         gaugeConfig.emptySymbol.repeat(empty) +
+         ` ${value}%`;
 }
 
 /**
- * 英語の分類を日本語に変換
+ * 分類を日本語に変換
+ * @param {string} classification - 英語の分類名
+ * @return {string} 日本語の分類名
  */
-function getStatusJapanese(classification) {
-  const statusMap = {
-    'extreme fear': '極度の恐怖 😱',
-    'fear': '恐怖 😰',
-    'neutral': '中立 😐',
-    'greed': '欲望 😊',
-    'extreme greed': '極度の欲望 🤑'
-  };
-  return statusMap[classification.toLowerCase()] || classification;
+function translateClassification(classification) {
+  const config = getConfig();
+  const classifications = config.messages.classifications;
+
+  const lowerClassification = classification.toLowerCase();
+  return classifications[lowerClassification] || classification;
 }
