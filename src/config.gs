@@ -5,6 +5,7 @@
  * このファイルには以下が含まれます：
  * - API認証情報の取得
  * - アラート設定
+ * - メッセージテンプレート
  * - その他定数
  */
 
@@ -24,7 +25,7 @@ function getConfig() {
     alerts: getAlertSettings(),
 
     // メッセージテンプレート
-    messages: getMessageTemplates(),  // ← この行を追加
+    messages: getMessageTemplates(),
 
     // その他定数
     constants: getConstants()
@@ -93,6 +94,22 @@ function getConstants() {
     // キャッシュ有効期限（秒）
     cacheExpiration: 21600, // 6時間
 
+    // 週次データ用キー（曜日別）
+    weeklyKeys: {
+      0: 'fear_greed_sun',
+      1: 'fear_greed_mon',
+      2: 'fear_greed_tue',
+      3: 'fear_greed_wed',
+      4: 'fear_greed_thu',
+      5: 'fear_greed_fri',
+      6: 'fear_greed_sat'
+    },
+
+    // 週次レポート設定
+    weekly: {
+      minDataCount: 5  // 最低必要なデータ数（5日分未満は投稿しない）
+    },
+
     // ログプレフィックス
     logPrefix: {
       info: '✅',
@@ -157,6 +174,14 @@ function getMessageTemplates() {
     report: {
       title: '🔔 CNN Fear & Greed Index（米国株式市場）',
       hashtags: '#米国株 #SP500'
+    },
+
+    // 週次レポートのテンプレート
+    weekly: {
+      title: '🔔 CNN Fear & Greed Index',
+      subtitle: '今週の振り返り',
+      hashtags: '#米国株 #週間レポート',
+      dayLabels: ['日', '月', '火', '水', '木', '金', '土']
     },
 
     // ゲージ設定

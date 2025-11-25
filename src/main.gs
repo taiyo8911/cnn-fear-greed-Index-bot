@@ -3,7 +3,7 @@
  * Fear & Greed Index Bot - メイン実行ファイル
  *
  * このファイルには以下が含まれます：
- * - トリガーから呼び出される関数（checkAlert, dailyReport）
+ * - トリガーから呼び出される関数（checkAlert, dailyReport, weeklyReport）
  * - Bot実行のメインロジック
  * - テスト用関数
  */
@@ -24,6 +24,44 @@ function checkAlert() {
 function dailyReport() {
   Logger.log('📊 定期レポート: ' + new Date());
   runBot(true);
+}
+
+/**
+ * 週次レポート（毎週土曜日朝10時に実行）
+ * トリガーから自動実行される
+ */
+function weeklyReport() {
+  Logger.log('📈 週次レポート: ' + new Date());
+
+  // 1. 週次データを取得
+  const weeklyData = loadWeeklyData();
+
+  // 2. データ数をカウント
+  const dataCount = weeklyData.filter(d => d !== null).length;
+  Logger.log(`週次データ: ${dataCount}/7 日分`);
+
+  // 3. 最低データ数チェック
+  const config = getConfig();
+  const minDataCount = config.constants.weekly.minDataCount;
+
+  if (dataCount < minDataCount) {
+    Logger.log(`⚠️ データ不足のため週次レポートをスキップ（${dataCount}/${minDataCount}日分）`);
+    return;
+  }
+
+  // 4. メッセージ生成
+  const message = createWeeklyMessage(weeklyData);
+
+  Logger.log('\n--- 週次レポート ---');
+  Logger.log(message);
+  Logger.log('-------------------\n');
+
+  // 5. 投稿
+  if (postToTwitter(message)) {
+    Logger.log('✅ 週次レポート投稿成功');
+  } else {
+    Logger.log('❌ 週次レポート投稿失敗');
+  }
 }
 
 /**
@@ -85,6 +123,12 @@ function runBot(isScheduledReport) {
     // 投稿しない場合でもデータは保存
     saveData(indexData);
   }
+
+  // 6. 週次データも保存（定期レポート時のみ）
+  if (isScheduledReport) {
+    const dayOfWeek = getDayOfWeekJST();
+    saveWeeklyDataByDay(indexData, dayOfWeek);
+  }
 }
 
 /**
@@ -129,6 +173,42 @@ function testBot() {
     Logger.log(message);
     Logger.log('-----------------------------\n');
   }
+
+  Logger.log('※ このテストでは投稿は行われません');
+}
+
+/**
+ * 週次レポートテスト（投稿なし）
+ * 手動実行用：週次レポートのメッセージ生成のみ
+ */
+function testWeeklyReport() {
+  Logger.log('=== 週次レポートテスト（投稿なし） ===');
+
+  // 1. 週次データを取得
+  const weeklyData = loadWeeklyData();
+
+  // 2. データ数をカウント
+  const dataCount = weeklyData.filter(d => d !== null).length;
+  Logger.log(`週次データ: ${dataCount}/7 日分\n`);
+
+  // 3. データ内容を表示
+  debugShowWeeklyData();
+
+  // 4. 最低データ数チェック
+  const config = getConfig();
+  const minDataCount = config.constants.weekly.minDataCount;
+
+  if (dataCount < minDataCount) {
+    Logger.log(`\n⚠️ データ不足（${dataCount}/${minDataCount}日分）`);
+    Logger.log('本番実行では投稿されません');
+  }
+
+  // 5. メッセージ生成（データ不足でも生成してプレビュー）
+  const message = createWeeklyMessage(weeklyData);
+
+  Logger.log('\n--- 週次レポートプレビュー ---');
+  Logger.log(message);
+  Logger.log('-----------------------------\n');
 
   Logger.log('※ このテストでは投稿は行われません');
 }
@@ -180,5 +260,26 @@ function testClearCache() {
     // クリア後のデータを表示
     Logger.log('クリア後:');
     debugShowCache();
+  }
+}
+
+/**
+ * 週次データクリアテスト
+ * 手動実行用：週次データをクリアします
+ */
+function testClearWeeklyData() {
+  Logger.log('=== 週次データクリアテスト ===');
+
+  // クリア前のデータを表示
+  Logger.log('クリア前:');
+  debugShowWeeklyData();
+
+  // クリア実行
+  if (clearWeeklyData()) {
+    Logger.log('\n✅ 週次データをクリアしました\n');
+
+    // クリア後のデータを表示
+    Logger.log('クリア後:');
+    debugShowWeeklyData();
   }
 }

@@ -5,6 +5,7 @@
  * このファイルには以下が含まれます：
  * - ツイート文の作成
  * - ゲージの生成
+ * - 週次レポートの生成
  * - 分類の日本語変換
  * - 日時フォーマット
  */
@@ -81,6 +82,82 @@ ${template.title}
 ${gauge}
 
 ${template.hashtags}`;
+}
+
+/**
+ * 週次レポートメッセージを構築
+ * @param {Array} weeklyData - 7日分のデータ配列 [日, 月, 火, 水, 木, 金, 土]
+ * @return {string} 週次レポートメッセージ
+ */
+function createWeeklyMessage(weeklyData) {
+  const config = getConfig();
+  const template = config.messages.weekly;
+
+  const dateRange = formatWeekDateRange();
+  const graph = createWeeklyGraph(weeklyData);
+
+  return `${template.title}
+${template.subtitle}（${dateRange}）
+
+${graph}
+
+${template.hashtags}`;
+}
+
+/**
+ * 週次グラフを生成
+ * @param {Array} weeklyData - 7日分のデータ配列
+ * @return {string} グラフ文字列
+ */
+function createWeeklyGraph(weeklyData) {
+  const config = getConfig();
+  const dayLabels = config.messages.weekly.dayLabels;
+  const lines = [];
+
+  for (let i = 0; i < 7; i++) {
+    const dayLabel = dayLabels[i];
+    const data = weeklyData[i];
+
+    if (data && typeof data.value === 'number') {
+      // データがある場合: ゲージ表示
+      const gauge = createGauge(data.value);
+      lines.push(`${dayLabel} ${gauge}`);
+    } else {
+      // データがない場合: 「-」表示
+      lines.push(`${dayLabel} -`);
+    }
+  }
+
+  return lines.join('\n');
+}
+
+/**
+ * 今週の日付範囲をフォーマット（日曜〜土曜）
+ * @return {string} 日付範囲文字列（例: "11/18〜11/24"）
+ */
+function formatWeekDateRange() {
+  const now = new Date();
+
+  // 日本時間に変換
+  const jstOffset = 9 * 60;
+  const jstTime = new Date(now.getTime() + (jstOffset + now.getTimezoneOffset()) * 60000);
+
+  // 今週の日曜日を計算
+  const dayOfWeek = jstTime.getDay();
+  const sunday = new Date(jstTime);
+  sunday.setDate(jstTime.getDate() - dayOfWeek);
+
+  // 今週の土曜日を計算
+  const saturday = new Date(sunday);
+  saturday.setDate(sunday.getDate() + 6);
+
+  // フォーマット
+  const startMonth = sunday.getMonth() + 1;
+  const startDate = sunday.getDate();
+  const endMonth = saturday.getMonth() + 1;
+  const endDate = saturday.getDate();
+
+  return `${startMonth}/${startDate}〜${endMonth}/${endDate}`;
 }
 
 /**
